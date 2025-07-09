@@ -1,0 +1,61 @@
+services:
+  persondb:
+    image: postgres:15
+    container_name: persondb
+    environment:
+      POSTGRES_DB: persondb
+      POSTGRES_USER: dima
+      POSTGRES_PASSWORD: dima
+    volumes:
+      - ./persondb_init.sql:/docker-entrypoint-initdb.d/persondb_init.sql
+    ports:
+      - "5432:5432"
+
+  creditdb:
+    image: postgres:15
+    container_name: creditdb
+    environment:
+      POSTGRES_DB: creditdb
+      POSTGRES_USER: dima
+      POSTGRES_PASSWORD: dima
+    volumes:
+      - ./creditdb_init.sql:/docker-entrypoint-initdb.d/creditdb_init.sql
+
+    ports:
+      - "5433:5432"
+
+  person-service:
+    build:
+      context: ../PersonService
+    container_name: person-service
+    depends_on:
+      - persondb
+    environment:
+      DB_URL: jdbc:postgresql://persondb:5432/persondb
+      DB_USER: dima
+      DB_PASSWORD: dima
+    ports:
+      - "8081:8080"
+
+  credit-service:
+    build:
+      context: ../CreditService
+    container_name: credit-service
+    depends_on:
+      - creditdb
+    environment:
+      DB_URL: jdbc:postgresql://creditdb:5432/creditdb
+      DB_USER: dima
+      DB_PASSWORD: dima
+    ports:
+      - "8082:8080"
+
+  central-service:
+    build:
+      context: ../CentralService
+    container_name: central-service
+    depends_on:
+      - person-service
+      - credit-service
+    ports:
+      - "8080:8080"

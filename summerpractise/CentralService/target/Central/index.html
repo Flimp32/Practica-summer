@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <title>Центральный сервис</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 30px;
+            font-family: Arial, sans-serif;
+        }
+
+        th, td {
+            border: 1px solid #aaa;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        h2 {
+            margin-top: 40px;
+            font-family: Arial, sans-serif;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<h1>Поиск человека и кредитной истории</h1>
+<form id="searchForm">
+    <label>Имя: <input type="text" id="firstName" required /></label><br /><br />
+    <label>Фамилия: <input type="text" id="lastName" required /></label><br /><br />
+    <button type="submit">Найти</button>
+</form>
+
+<div id="result"></div>
+
+<script>
+    const form = document.getElementById('searchForm');
+    const result = document.getElementById('result');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const firstName = document.getElementById('firstName').value.trim();
+        const lastName = document.getElementById('lastName').value.trim();
+
+        try {
+            const response = await fetch('http://localhost:8080/central', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ firstName, lastName })
+            });
+
+            const data = await response.json();
+
+            if (!data.person) {
+                result.innerHTML = `<p class="error">Человек не найден</p>`;
+                return;
+            }
+
+            if (!data.credit_history || data.credit_history.length === 0) {
+                result.innerHTML = `<p>Кредитов нет</p>`;
+                return;
+            }
+
+
+            const person = data.person;
+            const creditArray = Array.isArray(data.credit_history)
+                ? data.credit_history
+                : [data.credit_history]; // на случай, если это всё ещё объект
+
+            const personTable = `
+                <h2>Информация о человеке</h2>
+                <table>
+                    <tr><th>Имя</th><td>${person.firstName}</td></tr>
+                    <tr><th>Фамилия</th><td>${person.lastName}</td></tr>
+                    <tr><th>Пол</th><td>${person.gender}</td></tr>
+                    <tr><th>Возраст</th><td>${person.age}</td></tr>
+                    <tr><th>Паспорт</th><td>${person.passport}</td></tr>
+                </table>
+            `;
+
+            let creditTable = `
+                <h2>Кредитная история</h2>
+                <table>
+                    <tr><th>Банк</th><th>Сумма кредита</th><th>Долг</th></tr>
+            `;
+
+            for (const credit of creditArray) {
+                creditTable += `
+                    <tr>
+                        <td>${credit.bank_name}</td>
+                        <td>${credit.credit}</td>
+                        <td>${credit.dolg}</td>
+                    </tr>
+                `;
+            }
+
+            creditTable += '</table>';
+
+            result.innerHTML = personTable + creditTable;
+
+        } catch (err) {
+            result.innerHTML = `<p class="error">Ошибка сети или сервера: ${err.message}</p>`;
+        }
+    });
+</script>
+
+</body>
+</html>
+
+
